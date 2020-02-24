@@ -1,58 +1,58 @@
-﻿Shader "Unlit/NewUnlitShader"
+﻿Shader "Custom/Waves"
 {
-    Properties
-    {
-        _MainTex ("Texture", 2D) = "white" {}
-    }
-    SubShader
-    {
-        Tags { "RenderType"="Opaque" }
-        LOD 100
+	Properties
+	{
+		_Color("Color", Color) = (0,0,0,1)
+		_Strength("Strength", Range(0,2)) = 1.0
+		_Speed("Speed", Range(-200,200)) = 100
+	}
 
-        Pass
-        {
-            CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-            // make fog work
-            #pragma multi_compile_fog
+	SubShader
+	{
+		Tags{ "RenderType" = "transparent" }
 
-            #include "UnityCG.cginc"
+		Pass
+		{
+			Cull Off	
 
-            struct appdata
-            {
-                float4 vertex : POSITION;
-                float2 uv : TEXCOORD0;
-            };
+			CGPROGRAM
 
-            struct v2f
-            {
-                float2 uv : TEXCOORD0;
-                UNITY_FOG_COORDS(1)
-                float4 vertex : SV_POSITION;
-            };
+			#pragma vertex vertexFunc
+			#pragma fragment fragmentFunc
 
-            sampler2D _MainTex;
-            float4 _MainTex_ST;
+			float4 _Color;
+			float _Strength;
+			float _Speed;
 
-            v2f vert (appdata v)
-            {
-                v2f o;
-                o.vertex = UnityObjectToClipPos(v.vertex);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-                UNITY_TRANSFER_FOG(o,o.vertex);
-                return o;
-            }
+			struct vertexInput
+			{
+				float4 vertex : POSITION;
+			};
 
-            fixed4 frag (v2f i) : SV_Target
-            {
-                // sample the texture
-                fixed4 col = tex2D(_MainTex, i.uv);
-                // apply fog
-                UNITY_APPLY_FOG(i.fogCoord, col);
-                return col;
-            }
-            ENDCG
-        }
-    }
+			struct vertexOutput
+			{
+				float4 pos : SV_POSITION;
+			};
+
+			vertexOutput vertexFunc(vertexInput IN)
+			{
+				vertexOutput o;
+
+				float4 worldPos = mul(unity_ObjectToWorld, IN.vertex);
+				float displacement = (cos(worldPos.y) + cos(worldPos.x + (_Speed * _Time)));
+
+				worldPos.y = worldPos.y + (displacement * _Strength);
+				o.pos = mul(UNITY_MATRIX_VP, worldPos);
+
+				return o;
+			}
+
+			float4 fragmentFunc(vertexOutput IN) : COLOR
+			{
+				return _Color;
+			}
+
+			ENDCG
+		}
+	}
 }
